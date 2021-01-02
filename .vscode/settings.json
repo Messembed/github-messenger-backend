@@ -1,0 +1,10 @@
+{
+  "editor.formatOnType": true,
+  "cSpell.words": [
+    "dtos",
+    "jsonb"
+  ],
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+}
