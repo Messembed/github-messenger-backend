@@ -6,6 +6,13 @@ import { configModuleOptions } from '../config';
 import { GITHUB_CONFIGS_KEY, TGitHubConfigs } from '../config/github.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { MongooseModule } from '@nestjs/mongoose';
+import {
+  MongoDBConfigType,
+  MONGODB_CONFIG_KEY,
+} from '../config/mongodb.config';
+import { MessembedSDKModule } from 'messembed-sdk/nestjs';
+import { MessembedConfigType, MESSEMBED_CONFIG_KEY } from '../config/messembed';
 
 @Module({
   imports: [
@@ -18,6 +25,16 @@ import { AppService } from './app.service';
       inject: [GITHUB_CONFIGS_KEY],
     }),
     AuthModule,
+    MongooseModule.forRootAsync({
+      useFactory: (mongodbConfig: MongoDBConfigType) => ({
+        uri: mongodbConfig.uri,
+      }),
+      inject: [MONGODB_CONFIG_KEY],
+    }),
+    MessembedSDKModule.forRootAsync({
+      useFactory: (messembedConfig: MessembedConfigType) => messembedConfig.uri,
+      inject: [MESSEMBED_CONFIG_KEY],
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

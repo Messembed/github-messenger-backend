@@ -35,7 +35,7 @@ export class AuthController {
       `https://github.com/login/oauth/authorize?client_id=` +
         this.githubConfigs.clientId +
         `&redirect_uri=` +
-        encodeURIComponent(this.appConfigs + '/oauth/github/callback'),
+        encodeURIComponent(this.appConfigs.baseUrl + '/oauth/github/callback'),
     );
   }
 
