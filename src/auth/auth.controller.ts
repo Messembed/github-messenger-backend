@@ -4,14 +4,18 @@ import {
   Inject,
   Query,
   Res,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { APP_CONFIGS_KEY, TAppConfigs } from '../config/app.config';
 import { GITHUB_CONFIGS_KEY, TGitHubConfigs } from '../config/github.config';
+import { UserDocument } from '../users/schemas/user.schema';
 import { AuthService } from './auth.service';
 import { GitHubOAuthRedirectPayloadDto } from './dto/github-oauth-redirect-payload.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller()
 @UsePipes(
@@ -41,8 +45,30 @@ export class AuthController {
 
   @Get('oauth/github/callback')
   async oauthRedirectHandler(
+    @Res() response: Response,
     @Query() payload: GitHubOAuthRedirectPayloadDto,
   ): Promise<any> {
-    return this.authService.githubOAuthRedirectHandler(payload);
+    const {
+      backendAccessToken,
+      messembedAccessToken,
+    } = await this.authService.githubOAuthRedirectHandler(payload);
+
+    response.redirect(
+      '/oauth/github/result?backendAccessToken=' +
+        encodeURIComponent(backendAccessToken) +
+        '&messembedAccessToken=' +
+        encodeURIComponent(messembedAccessToken),
+    );
+  }
+
+  @Get('oauth/github/result')
+  routeForPassingGitHubOAuthToken(): string {
+    return '';
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  getMe(@CurrentUser() user: UserDocument): UserDocument {
+    return user;
   }
 }

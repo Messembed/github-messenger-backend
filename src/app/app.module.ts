@@ -31,8 +31,12 @@ import { MessembedConfigType, MESSEMBED_CONFIG_KEY } from '../config/messembed';
       }),
       inject: [MONGODB_CONFIG_KEY],
     }),
-    MessembedSDKModule.forRootAsync({
-      useFactory: (messembedConfig: MessembedConfigType) => messembedConfig.uri,
+    MessembedSDKModule.forRootAdminAsync({
+      useFactory: (messembedConfig: MessembedConfigType) => ({
+        baseUrl: messembedConfig.uri,
+        password: messembedConfig.password,
+        username: messembedConfig.username,
+      }),
       inject: [MESSEMBED_CONFIG_KEY],
     }),
   ],

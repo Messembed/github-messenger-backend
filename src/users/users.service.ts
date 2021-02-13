@@ -35,4 +35,13 @@ export class UsersService {
 
     return user;
   }
+
+  async getUserOrFail(userId: string): Promise<UserDocument> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new Error('No user found with id' + userId);
+    }
+
+    return user;
+  }
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { TokenAuthentication } from '@octokit/auth-oauth-app/dist-types/types';
 import {
   GitHubOAuthAppAuth,
@@ -7,10 +7,10 @@ import {
 import { GitHubOAuthRedirectPayloadDto } from './dto/github-oauth-redirect-payload.dto';
 import { Octokit } from '@octokit/rest';
 import { UsersService } from '../users/users.service';
-import { MessembedConfigType, MESSEMBED_CONFIG_KEY } from '../config/messembed';
-import { InjectMessembedSDK } from 'messembed-sdk/nestjs';
-import { MessembedSDK } from 'messembed-sdk';
+import { InjectMessembedAdminSDK } from 'messembed-sdk/nestjs';
+import { MessembedAdminSDK } from 'messembed-sdk';
 import { User as MessembedUser } from 'messembed-sdk/dist/interfaces/user.interface';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -18,15 +18,14 @@ export class AuthService {
     private readonly usersService: UsersService,
     @InjectGitHubOAuthAppAuth()
     private readonly githubOAuthAppAuth: GitHubOAuthAppAuth,
-    @Inject(MESSEMBED_CONFIG_KEY)
-    private readonly messembedConfig: MessembedConfigType,
-    @InjectMessembedSDK()
-    private readonly messembedSdk: MessembedSDK,
+    @InjectMessembedAdminSDK()
+    private readonly messembedAdminSdk: MessembedAdminSDK,
+    private readonly jwtService: JwtService,
   ) {}
 
   async githubOAuthRedirectHandler(
     payload: GitHubOAuthRedirectPayloadDto,
-  ): Promise<any> {
+  ): Promise<{ messembedAccessToken: string; backendAccessToken: string }> {
     const tokenAuthentication = (await this.githubOAuthAppAuth({
       type: 'token',
       code: payload.code,
@@ -45,24 +44,27 @@ export class AuthService {
     let messembedUser: MessembedUser;
 
     try {
-      messembedUser = await this.messembedSdk.getUser(user.githubId.toString());
-    } catch (err) {
-      messembedUser = await this.messembedSdk.createUser(
-        {
-          id: user.githubId.toString(),
-          externalMetadata: { objectId: user._id },
-        },
-        { password: this.messembedConfig.password },
+      messembedUser = await this.messembedAdminSdk.getUser(
+        user.githubId.toString(),
       );
+    } catch (err) {
+      messembedUser = await this.messembedAdminSdk.createUser({
+        id: user.githubId.toString(),
+        externalMetadata: { objectId: user._id },
+      });
     }
 
-    const accessToken = await this.messembedSdk.createAccessToken(
-      messembedUser.externalId,
-      {
-        password: this.messembedConfig.password,
-      },
+    const messembedAccessToken = await this.messembedAdminSdk.createAccessToken(
+      messembedUser._id,
     );
 
-    return accessToken;
+    const backendAccessToken = await this.jwtService.signAsync({
+      sub: user._id,
+    });
+
+    return {
+      messembedAccessToken: messembedAccessToken.accessToken,
+      backendAccessToken,
+    };
   }
 }
