@@ -53,12 +53,15 @@ export class AuthController {
       messembedAccessToken,
     } = await this.authService.githubOAuthRedirectHandler(payload);
 
-    response.redirect(
-      '/oauth/github/result?backendAccessToken=' +
-        encodeURIComponent(backendAccessToken) +
-        '&messembedAccessToken=' +
-        encodeURIComponent(messembedAccessToken),
-    );
+    response.cookie('backendAccessToken', backendAccessToken, {
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
+    });
+
+    response.cookie('messembedAccessToken', messembedAccessToken, {
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
+    });
+
+    response.redirect('/');
   }
 
   @Get('oauth/github/result')

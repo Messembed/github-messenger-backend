@@ -11,6 +11,7 @@ import { InjectMessembedAdminSDK } from 'messembed-sdk/nestjs';
 import { MessembedAdminSDK } from 'messembed-sdk';
 import { User as MessembedUser } from 'messembed-sdk/dist/interfaces/user.interface';
 import { JwtService } from '@nestjs/jwt';
+import _ from 'lodash';
 
 @Injectable()
 export class AuthService {
@@ -50,9 +51,16 @@ export class AuthService {
     } catch (err) {
       messembedUser = await this.messembedAdminSdk.createUser({
         id: user.githubId.toString(),
-        externalMetadata: { objectId: user._id },
+        externalMetadata: {
+          objectId: user._id,
+          name: githubUser.name,
+          username: githubUser.login,
+          avatar: githubUser.avatar_url,
+        },
       });
     }
+
+    await this.createInitialChatsForUser(octokit, messembedUser._id);
 
     const messembedAccessToken = await this.messembedAdminSdk.createAccessToken(
       messembedUser._id,
@@ -66,5 +74,55 @@ export class AuthService {
       messembedAccessToken: messembedAccessToken.accessToken,
       backendAccessToken,
     };
+  }
+
+  private async createInitialChatsForUser(
+    octokit: Octokit,
+    messembedUserId: string,
+  ): Promise<void> {
+    const followers = await octokit.users.listFollowersForAuthenticatedUser();
+    const followings = await octokit.users.listFollowedByAuthenticated();
+
+    const commonFollows = _.intersectionBy(
+      followers.data,
+      followings.data,
+      'id',
+    );
+
+    await Promise.all(
+      commonFollows.map(async (commonFollowUser) => {
+        try {
+          try {
+            await this.messembedAdminSdk.getUser(
+              commonFollowUser.id.toString(),
+            );
+          } catch (err) {
+            const commonFollowUserfullObject = await octokit.users.getByUsername(
+              {
+                username: commonFollowUser.login,
+              },
+            );
+
+            // if not found
+            await this.messembedAdminSdk.createUser({
+              id: commonFollowUserfullObject.data.id.toString(),
+              externalMetadata: {
+                name: commonFollowUserfullObject.data.name,
+                username: commonFollowUserfullObject.data.login,
+                avatar: commonFollowUserfullObject.data.avatar_url,
+              },
+            });
+          }
+
+          await this.messembedAdminSdk.createChat({
+            firstCompanionId: messembedUserId,
+            secondCompanionId: commonFollowUser.id.toString(),
+            title: '1',
+          });
+        } catch (err) {
+          console.log(err);
+        }
+      }),
+    );
   }
 }
