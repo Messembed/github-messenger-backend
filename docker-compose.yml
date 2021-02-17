@@ -6,6 +6,9 @@ services:
     ports:
       - '127.0.0.1:3002:80'
     restart: unless-stopped
+    networks:
+      default: null
+      github-messenger: null
     depends_on:
       - mongo
 
@@ -19,3 +22,6 @@ services:
     volumes:
       - /data/ghms/mongo/data/db:/data/db
     restart: unless-stopped
+
+networks:
+  github-messenger: null
