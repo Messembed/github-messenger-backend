@@ -1,0 +1,21 @@
+version: '3'
+services:
+  ghms:
+    build: .
+    env_file: ./.env
+    ports:
+      - '127.0.0.1:3002:80'
+    restart: unless-stopped
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - 127.0.0.1:27019:27017
+    volumes:
+      - /data/ghms/mongo/data/db:/data/db
+    restart: unless-stopped
