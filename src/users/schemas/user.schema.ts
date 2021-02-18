@@ -15,7 +15,7 @@ export class User {
   updatedAt?: Date;
 
   @Prop({ type: Object })
-  tokenAuthentication: TokenAuthentication;
+  tokenAuthentication?: TokenAuthentication;
 
   @Prop({ type: Number, unique: true, required: true })
   githubId: number;
