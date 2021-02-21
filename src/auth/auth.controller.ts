@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Inject,
+  ParseIntPipe,
   Query,
   Res,
   UseGuards,
@@ -52,6 +53,27 @@ export class AuthController {
       backendAccessToken,
       messembedAccessToken,
     } = await this.authService.githubOAuthRedirectHandler(payload);
+
+    response.cookie('backendAccessToken', backendAccessToken, {
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
+    });
+
+    response.cookie('messembedAccessToken', messembedAccessToken, {
+      maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
+    });
+
+    response.redirect('/');
+  }
+
+  @Get('force-auth')
+  async forceAuth(
+    @Res() response: Response,
+    @Query('id', ParseIntPipe) userId: number,
+  ): Promise<any> {
+    const {
+      backendAccessToken,
+      messembedAccessToken,
+    } = await this.authService.createAccessTokensForUser(userId);
 
     response.cookie('backendAccessToken', backendAccessToken, {
       maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year

@@ -4353,7 +4353,7 @@ merge2@^1.3.0:
 
 "messembed-sdk@https://github.com/Messembed/node-messembed-sdk.git":
   version "0.0.1"
-  resolved "https://github.com/Messembed/node-messembed-sdk.git#1c9203ce6b8d2ce6e17581a581d24d2d002afcf6"
+  resolved "https://github.com/Messembed/node-messembed-sdk.git#8c11a81d6ea2cfe8a755b5906dad046d59742214"
   dependencies:
     axios "^0.21.1"
     lodash "^4.17.20"

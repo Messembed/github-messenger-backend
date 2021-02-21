@@ -18,32 +18,32 @@ export class UsersService {
     private readonly messembedAdminSdk: MessembedAdminSDK,
   ) {}
 
-  async createUser(data: {
+  async createOrUpdateUser(data: {
     tokenAuthentication?: TokenAuthentication;
-    githubId: number;
+    _id: number;
   }): Promise<UserDocument> {
     let user = await this.userModel.findOne({
-      githubId: data.githubId,
+      _id: data._id,
     });
 
     if (user) {
-      user.tokenAuthentication = data.tokenAuthentication;
-      user.githubId = data.githubId;
+      if (data.tokenAuthentication) {
+        user.tokenAuthentication = data.tokenAuthentication;
+      }
 
       await user.save();
     } else {
       user = await this.userModel.create({
-        _id: new Types.ObjectId(),
+        _id: data._id,
         createdAt: new Date(),
         tokenAuthentication: data.tokenAuthentication,
-        githubId: data.githubId,
       });
     }
 
     return user;
   }
 
-  async getUserOrFail(userId: string): Promise<UserDocument> {
+  async getUserOrFail(userId: number): Promise<UserDocument> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new Error('No user found with id' + userId);
@@ -78,34 +78,25 @@ export class UsersService {
       githubUserId = githubUser.data.id;
     }
 
-    let user = await this.userModel.findOne({
-      githubId: githubUserId,
-    });
+    await this.createOrUpdateUser({ _id: githubUserId });
     let messembedUser: messembed.User;
 
-    if (!user) {
+    try {
+      messembedUser = await this.messembedAdminSdk.getUser(
+        githubUserId.toString(),
+      );
+    } catch {
       const githubUser = await this.getGitHubUserById(githubUserId);
 
-      user = await this.userModel.create({
-        _id: new Types.ObjectId(),
-        createdAt: new Date(),
-        tokenAuthentication: null,
-        githubId: githubUserId,
-      });
-
+      // if not found
       messembedUser = await this.messembedAdminSdk.createUser({
-        id: user.githubId.toString(),
+        id: githubUser.id.toString(),
         externalMetadata: {
-          objectId: user._id,
           name: githubUser.name,
           username: githubUser.login,
           avatar: githubUser.avatar_url,
         },
       });
-    } else {
-      messembedUser = await this.messembedAdminSdk.getUser(
-        user.githubId.toString(),
-      );
     }
 
     return messembedUser;

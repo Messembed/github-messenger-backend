@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "update-sdk": "cd ../messembed-sdk && yarn build && cd ../github-messenger-backend && yarn add link:./../messembed-sdk"
+    "update-sdk": "yarn add https://github.com/Messembed/node-messembed-sdk.git"
   },
   "dependencies": {
     "@nestjs/common": "^7.5.1",

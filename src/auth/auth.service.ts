@@ -37,22 +37,19 @@ export class AuthService {
 
     const { data: githubUser } = await octokit.users.getAuthenticated();
 
-    const user = await this.usersService.createUser({
-      githubId: githubUser.id,
+    const user = await this.usersService.createOrUpdateUser({
+      _id: githubUser.id,
       tokenAuthentication: tokenAuthentication,
     });
 
     let messembedUser: MessembedUser;
 
     try {
-      messembedUser = await this.messembedAdminSdk.getUser(
-        user.githubId.toString(),
-      );
+      messembedUser = await this.messembedAdminSdk.getUser(user._id.toString());
     } catch (err) {
       messembedUser = await this.messembedAdminSdk.createUser({
-        id: user.githubId.toString(),
+        id: user._id.toString(),
         externalMetadata: {
-          objectId: user._id,
           name: githubUser.name,
           username: githubUser.login,
           avatar: githubUser.avatar_url,
@@ -60,7 +57,7 @@ export class AuthService {
       });
     }
 
-    await this.createInitialChatsForUser(octokit, messembedUser._id);
+    await this.createInitialChatsForUser(octokit, user._id);
 
     const messembedAccessToken = await this.messembedAdminSdk.createAccessToken(
       messembedUser._id,
@@ -78,7 +75,7 @@ export class AuthService {
 
   private async createInitialChatsForUser(
     octokit: Octokit,
-    messembedUserId: string,
+    userId: number,
   ): Promise<void> {
     const followers = await octokit.users.listFollowersForAuthenticatedUser();
     const followings = await octokit.users.listFollowedByAuthenticated();
@@ -91,38 +88,62 @@ export class AuthService {
 
     await Promise.all(
       commonFollows.map(async (commonFollowUser) => {
+        await this.usersService.createOrUpdateUser({
+          _id: commonFollowUser.id,
+        });
+
         try {
-          try {
-            await this.messembedAdminSdk.getUser(
-              commonFollowUser.id.toString(),
-            );
-          } catch (err) {
-            const commonFollowUserfullObject = await octokit.users.getByUsername(
-              {
-                username: commonFollowUser.login,
-              },
-            );
+          await this.messembedAdminSdk.getUser(commonFollowUser.id.toString());
+        } catch {
+          const commonFollowUserFullObject = await octokit.users.getByUsername({
+            username: commonFollowUser.login,
+          });
 
-            // if not found
-            await this.messembedAdminSdk.createUser({
-              id: commonFollowUserfullObject.data.id.toString(),
-              externalMetadata: {
-                name: commonFollowUserfullObject.data.name,
-                username: commonFollowUserfullObject.data.login,
-                avatar: commonFollowUserfullObject.data.avatar_url,
-              },
-            });
-          }
+          // if not found
+          await this.messembedAdminSdk.createUser({
+            id: commonFollowUserFullObject.data.id.toString(),
+            externalMetadata: {
+              name: commonFollowUserFullObject.data.name,
+              username: commonFollowUserFullObject.data.login,
+              avatar: commonFollowUserFullObject.data.avatar_url,
+            },
+          });
+        }
 
+        try {
           await this.messembedAdminSdk.createChat({
-            firstCompanionId: messembedUserId,
+            firstCompanionId: userId.toString(),
             secondCompanionId: commonFollowUser.id.toString(),
-            title: '1',
           });
         } catch (err) {
-          console.log(err);
+          // chat already exists
+          if (err?.response?.data?.code !== 'CHAT_ALREADY_EXISTS') {
+            throw err;
+          }
         }
       }),
     );
+  }
+
+  async createAccessTokensForUser(
+    userId: number,
+  ): Promise<{ messembedAccessToken: string; backendAccessToken: string }> {
+    const user = await this.usersService.getUserOrFail(userId);
+    const messembedUser = await this.messembedAdminSdk.getUser(
+      user._id.toString(),
+    );
+
+    const messembedAccessToken = await this.messembedAdminSdk.createAccessToken(
+      messembedUser._id,
+    );
+
+    const backendAccessToken = await this.jwtService.signAsync({
+      sub: user._id,
+    });
+
+    return {
+      messembedAccessToken: messembedAccessToken.accessToken,
+      backendAccessToken,
+    };
   }
 }

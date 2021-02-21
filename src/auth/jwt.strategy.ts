@@ -9,7 +9,7 @@ import { UserDocument } from '../users/schemas/user.schema';
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     @Inject(JWT_CONFIG_KEY) jwtConfig: TJwtConfig,
-    private readonly usersServce: UsersService,
+    private readonly usersService: UsersService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any): Promise<UserDocument> {
-    const user = await this.usersServce.getUserOrFail(payload.sub);
+    const user = await this.usersService.getUserOrFail(payload.sub);
     return user;
   }
 }
